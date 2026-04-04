@@ -5,6 +5,7 @@ import com.quantnexus.domain.enums.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,22 +13,16 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface FinancialRecordRepository extends JpaRepository<FinancialRecord, UUID> {
+public interface FinancialRecordRepository extends JpaRepository<FinancialRecord, UUID> , JpaSpecificationExecutor<FinancialRecord> {
 
-    /**
-     * Finds transactions filtered by user and type (INCOME/EXPENSE).
-     */
+    //Finds transactions filtered by user and type (INCOME/EXPENSE).
     List<FinancialRecord>findByUserIdAndTransactionType(Long userId, TransactionType transactionType);
 
-    /**
-     * Identifies all records for a specific user ID.
-     */
+     //Identifies all records for a specific user ID.
     List<FinancialRecord> findByUserId(Long userId);
 
-    /**
-     * Resolves a unique transaction by its public-facing reference number.
-     * Uses: TXN-YYYYMMDD-XXXX
-     */
+    //Resolves a unique transaction by its public-facing reference number.
+    //Uses: TXN-YYYYMMDD-XXXX
     Optional<FinancialRecord> findByReferenceNumber(String referenceNumber);
 
     //Helper in Transaction Creation
