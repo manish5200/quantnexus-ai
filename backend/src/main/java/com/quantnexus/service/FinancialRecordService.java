@@ -38,20 +38,27 @@ public class FinancialRecordService {
     private final FinancialRecordRepository recordRepository;
     private final UserRepository userRepository;
 
-
     /**
      * Creates a new entry in the ledger.
      * We calculate a "snapshot" of the balance right here so we always have a
      * historical record of the user's balance at that exact moment.
      */
     @Transactional
-    public TransactionResponse createTransaction(Long currentUserId, TransactionRequest request){
+    public TransactionResponse createTransaction(Long currentUserId, TransactionRequest request) {
         log.info("Processing new {} transaction for User ID: {}", request.type(), currentUserId);
+
+        // --- ENUM SAFEGUARD ---
+        if (request.category().getAllowedType() != request.type()) {
+            throw new IllegalArgumentException(
+                    String.format("Data Integrity Error: Category '%s' cannot be logged as an '%s'.",
+                            request.category().name(), request.type().name())
+            );
+        }
 
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Operational Error: Target user profile not found."));
 
-        //Calculate the new 'balanceAfter' snapshot
+        // Calculate the new 'balanceAfter' snapshot
         BigDecimal currentBalance = recordRepository
                 .findFirstByUserIdOrderByTransactionDateDescCreatedAtDesc(currentUserId)
                 .map(FinancialRecord::getBalanceAfter)
@@ -82,19 +89,19 @@ public class FinancialRecordService {
 
     /**
      * Fetches a single record by reference number with strict security checks.
-     * Logic: A user can see their OWN record. Staff (Admin/Analyst) can see ANY record.
+     * Logic: A user can see their OWN record. Staff (Admin/Analyst) can see ANY
+     * record.
      */
     @Transactional(readOnly = true)
     public TransactionResponse getByReference(
-            Long currentUserId, String refNumber, boolean isStaff){
+            Long currentUserId, String refNumber, boolean isStaff) {
 
         FinancialRecord record = recordRepository.findByReferenceNumber(refNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Ledger entry not found: " + refNumber));
 
         // The "Gatekeeper" logic: Only the owner or staff members get past this point.
-        if(!isStaff && !record.getUser().getId().equals(currentUserId)){
-            log.error("Security Alert: Unauthorized access attempt to record {} by User {}"
-                    , refNumber, currentUserId);
+        if (!isStaff && !record.getUser().getId().equals(currentUserId)) {
+            log.error("Security Alert: Unauthorized access attempt to record {} by User {}", refNumber, currentUserId);
             throw new AccessDeniedException("Access Denied: You do not have permission to view this transaction.");
         }
         return mapToResponse(record);
@@ -106,12 +113,12 @@ public class FinancialRecordService {
      */
     public Page<TransactionResponse> getHistory(
             Long userId, TransactionType type, TransactionCategory category,
-            LocalDate startDate, LocalDate endDate, Pageable pageable){
+            LocalDate startDate, LocalDate endDate, Pageable pageable) {
 
         log.info("Fetching filtered history for user ID: {}", userId);
 
-        Specification<FinancialRecord>specs = FinancialRecordSpecs.getFilteredRecords(
-          userId,type,category,startDate,endDate);
+        Specification<FinancialRecord> specs = FinancialRecordSpecs.getFilteredRecords(
+                userId, type, category, startDate, endDate);
 
         return recordRepository.findAll(specs, pageable).map(this::mapToResponse);
     }
@@ -120,7 +127,7 @@ public class FinancialRecordService {
      * Updates an existing record and triggers an IN-MEMORY Balance Cascade.
      */
     @Transactional
-    public TransactionResponse updateRecord(String refNumber, TransactionUpdateRequest request){
+    public TransactionResponse updateRecord(String refNumber, TransactionUpdateRequest request) {
         FinancialRecord record = recordRepository.findByReferenceNumber(refNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Ledger entry not found: " + refNumber));
 
@@ -128,11 +135,14 @@ public class FinancialRecordService {
 
         boolean requiresCascade = false;
 
-        if(request.description() != null)record.setDescription(request.description());
-        if(request.category() != null) record.setTransactionCategory(request.category());
-        if(request.metadata() != null) record.getMetadata().putAll(request.metadata());
+        if (request.description() != null)
+            record.setDescription(request.description());
+        if (request.category() != null)
+            record.setTransactionCategory(request.category());
+        if (request.metadata() != null)
+            record.getMetadata().putAll(request.metadata());
 
-        if(request.amount() != null && request.amount().compareTo(record.getAmount()) != 0){
+        if (request.amount() != null && request.amount().compareTo(record.getAmount()) != 0) {
             record.setAmount(request.amount());
             requiresCascade = true;
         }
@@ -145,7 +155,18 @@ public class FinancialRecordService {
             requiresCascade = true; // Date changes disrupt the timeline order!
         }
 
-        if(requiresCascade){
+        // --- ENUM SAFEGUARD FOR UPDATES ---
+        TransactionType effectiveType = record.getTransactionType();
+        TransactionCategory effectiveCategory = record.getTransactionCategory();
+
+        if (effectiveCategory.getAllowedType() != effectiveType) {
+            throw new IllegalArgumentException(
+                    String.format("Update Conflict: The category '%s' is not valid for a transaction of type '%s'.",
+                            effectiveCategory.name(), effectiveType.name())
+            );
+        }
+
+        if (requiresCascade) {
             triggerInMemoryCascade(record.getUser().getId());
         }
 
@@ -155,24 +176,25 @@ public class FinancialRecordService {
 
     /**
      * THE SELF-HEALING ENGINE
-     * Pulls the whole ledger, sorts it chronologically, and recalculates every balance.
+     * Pulls the whole ledger, sorts it chronologically, and recalculates every
+     * balance.
      */
     private void triggerInMemoryCascade(Long userId) {
-        List<FinancialRecord>entireLedger = recordRepository.findByUserId(userId);
+        List<FinancialRecord> entireLedger = recordRepository.findByUserId(userId);
 
         // Sort chronologically (oldest to newest)
         entireLedger.sort(Comparator.comparing(FinancialRecord::getTransactionDate)
                 .thenComparing(FinancialRecord::getCreatedAt));
 
         BigDecimal runningBalance = BigDecimal.ZERO;
-        for(FinancialRecord entry :  entireLedger){
+        for (FinancialRecord entry : entireLedger) {
             runningBalance = (entry.getTransactionType() == TransactionType.INCOME)
                     ? runningBalance.add(entry.getAmount())
                     : runningBalance.subtract(entry.getAmount());
 
             entry.setBalanceAfter(runningBalance);
         }
-        //save the updated ledger to the database
+        // save the updated ledger to the database
         recordRepository.saveAll(entireLedger);
 
         log.info("Ledger completely synchronized in-memory for User [{}].", userId);
@@ -180,7 +202,8 @@ public class FinancialRecordService {
 
     /*
      * Removes a record from the active view.
-     * Note: We use Soft Delete here. We don't actually erase the data (for audit reasons),
+     * Note: We use Soft Delete here. We don't actually erase the data (for audit
+     * reasons),
      * we just "hide" it. Only Admins can do this.
      */
     @Transactional
@@ -196,7 +219,7 @@ public class FinancialRecordService {
         log.warn("Record {} has been moved to the 'deleted' archive.", referenceNumber);
     }
 
-    //Helper
+    // Helper
     private TransactionResponse mapToResponse(FinancialRecord record) {
         return new TransactionResponse(
                 record.getReferenceNumber(),
@@ -206,8 +229,7 @@ public class FinancialRecordService {
                 record.getTransactionCategory(),
                 record.getDescription(),
                 record.getTransactionDate(),
-                record.getMetadata()
-        );
+                record.getMetadata());
     }
 
 }

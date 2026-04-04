@@ -12,7 +12,6 @@ app:
     jwt:
       expiration: 86400000 # 24 hours globally
 
-app:
   admin:
     email: manishneelambar@gmail.com
     password: Admin@5200
