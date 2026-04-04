@@ -102,6 +102,10 @@ public class FinancialRecord {
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, String> metadata;
 
+    // Enables Optimistic Locking to prevent concurrent update race conditions
+    @Version
+    private Long version;
+
     /**
      * Entity lifecycle hook to auto-generate the reference number prior to DB insertion.
      * Uses a YYYYMMDD prefix for fast sorting and a 6-character hex for collision safety.

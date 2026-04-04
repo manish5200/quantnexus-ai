@@ -1,7 +1,10 @@
 package com.quantnexus.controller;
 
+import com.quantnexus.domain.enums.TransactionCategory;
+import com.quantnexus.domain.enums.TransactionType;
 import com.quantnexus.dto.financial.TransactionRequest;
 import com.quantnexus.dto.financial.TransactionResponse;
+import com.quantnexus.dto.financial.TransactionUpdateRequest;
 import com.quantnexus.security.SecurityUser;
 import com.quantnexus.service.FinancialRecordService;
 import jakarta.validation.Valid;
@@ -9,12 +12,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 /**
  * REST Controller for the Financial Ledger.
@@ -61,17 +68,38 @@ public class FinancialRecordController {
     }
 
     /**
-     * Fetches a paginated history of transactions.
-     * Supports sorting and sizing (e.g., /records?page=0&size=10&sort=transactionDate,desc)
+     * DATABASE-LEVEL DYNAMIC FILTERING
+     * Fetches a paginated history of transactions based on optional criteria.
+     * Example: /api/v1/records?type=EXPENSE&category=FOOD&startDate=2024-01-01
      */
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     public ResponseEntity<Page<TransactionResponse>>getTransactionsHistory(
             @AuthenticationPrincipal SecurityUser securityUser,
-            @PageableDefault(size = 15) Pageable pageable){
+
+            // --- The Standout Filtering Params ---
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) TransactionCategory category,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+
+            // --- Pagination & Sorting ---
+            @PageableDefault(size = 15, sort = "transactionDate", direction = Sort.Direction.DESC) Pageable pageable){
+
         Long userId = securityUser.getId();
-        log.info("API Request: Fetch history for User {}", userId);
-        return ResponseEntity.ok(recordService.getHistory(userId, pageable));
+
+        log.info("API Request: Fetch filtered history for User [{}]", userId);
+        return ResponseEntity.ok(recordService.getHistory(userId, type, category, startDate, endDate, pageable));
+    }
+
+    //Updating the existing record using transaction reference number
+    @PutMapping("/{refNumber}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TransactionResponse> updateTransaction(
+            @PathVariable String refNumber,
+            @Valid @RequestBody TransactionUpdateRequest request) {
+        log.info("API Request: Admin update for record [{}]", refNumber);
+        return ResponseEntity.ok(recordService.updateRecord(refNumber, request));
     }
 
     /**

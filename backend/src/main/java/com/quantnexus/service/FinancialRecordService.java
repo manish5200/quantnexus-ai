@@ -2,23 +2,27 @@ package com.quantnexus.service;
 
 import com.quantnexus.domain.FinancialRecord;
 import com.quantnexus.domain.User;
+import com.quantnexus.domain.enums.TransactionCategory;
 import com.quantnexus.domain.enums.TransactionType;
 import com.quantnexus.dto.financial.TransactionRequest;
 import com.quantnexus.dto.financial.TransactionResponse;
 import com.quantnexus.dto.financial.TransactionUpdateRequest;
 import com.quantnexus.repository.FinancialRecordRepository;
 import com.quantnexus.repository.UserRepository;
+import com.quantnexus.repository.specification.FinancialRecordSpecs;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -100,12 +104,79 @@ public class FinancialRecordService {
     /**
      * Grabs a list of all transactions for a user, neatly organized into pages.
      */
-    public Page<TransactionResponse> getHistory(Long userId, Pageable pageable){
-        log.info("Fetching the full transaction history for user ID: {}", userId);
-        return recordRepository.findFirstByUserIdOrderByTransactionDateDescCreatedAtDesc(userId, pageable)
-                .map(this::mapToResponse);
+    public Page<TransactionResponse> getHistory(
+            Long userId, TransactionType type, TransactionCategory category,
+            LocalDate startDate, LocalDate endDate, Pageable pageable){
+
+        log.info("Fetching filtered history for user ID: {}", userId);
+
+        Specification<FinancialRecord>specs = FinancialRecordSpecs.getFilteredRecords(
+          userId,type,category,startDate,endDate);
+
+        return recordRepository.findAll(specs, pageable).map(this::mapToResponse);
     }
 
+    /**
+     * Updates an existing record and triggers an IN-MEMORY Balance Cascade.
+     */
+    @Transactional
+    public TransactionResponse updateRecord(String refNumber, TransactionUpdateRequest request){
+        FinancialRecord record = recordRepository.findByReferenceNumber(refNumber)
+                .orElseThrow(() -> new EntityNotFoundException("Ledger entry not found: " + refNumber));
+
+        log.warn("Admin Action: Initiating update for record [{}]", refNumber);
+
+        boolean requiresCascade = false;
+
+        if(request.description() != null)record.setDescription(request.description());
+        if(request.category() != null) record.setTransactionCategory(request.category());
+        if(request.metadata() != null) record.getMetadata().putAll(request.metadata());
+
+        if(request.amount() != null && request.amount().compareTo(record.getAmount()) != 0){
+            record.setAmount(request.amount());
+            requiresCascade = true;
+        }
+        if (request.type() != null && request.type() != record.getTransactionType()) {
+            record.setTransactionType(request.type());
+            requiresCascade = true;
+        }
+        if (request.transactionDate() != null) {
+            record.setTransactionDate(request.transactionDate());
+            requiresCascade = true; // Date changes disrupt the timeline order!
+        }
+
+        if(requiresCascade){
+            triggerInMemoryCascade(record.getUser().getId());
+        }
+
+        return mapToResponse(record);
+
+    }
+
+    /**
+     * THE SELF-HEALING ENGINE
+     * Pulls the whole ledger, sorts it chronologically, and recalculates every balance.
+     */
+    private void triggerInMemoryCascade(Long userId) {
+        List<FinancialRecord>entireLedger = recordRepository.findByUserId(userId);
+
+        // Sort chronologically (oldest to newest)
+        entireLedger.sort(Comparator.comparing(FinancialRecord::getTransactionDate)
+                .thenComparing(FinancialRecord::getCreatedAt));
+
+        BigDecimal runningBalance = BigDecimal.ZERO;
+        for(FinancialRecord entry :  entireLedger){
+            runningBalance = (entry.getTransactionType() == TransactionType.INCOME)
+                    ? runningBalance.add(entry.getAmount())
+                    : runningBalance.subtract(entry.getAmount());
+
+            entry.setBalanceAfter(runningBalance);
+        }
+        //save the updated ledger to the database
+        recordRepository.saveAll(entireLedger);
+
+        log.info("Ledger completely synchronized in-memory for User [{}].", userId);
+    }
 
     /*
      * Removes a record from the active view.
@@ -117,8 +188,11 @@ public class FinancialRecordService {
         FinancialRecord record = recordRepository.findByReferenceNumber(referenceNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Modification Error: Target record not found."));
 
-        recordRepository.delete(record); // Triggers our @SoftDelete annotation
+        Long userId = record.getUser().getId();
 
+        recordRepository.delete(record); // Triggers our @SoftDelete annotation
+        // Fixes the user balance
+        triggerInMemoryCascade(userId);
         log.warn("Record {} has been moved to the 'deleted' archive.", referenceNumber);
     }
 
