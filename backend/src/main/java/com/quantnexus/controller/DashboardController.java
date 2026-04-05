@@ -32,7 +32,6 @@ public class DashboardController {
     @PreAuthorize("hasAnyRole('VIEWER', 'ANALYST', 'ADMIN')") // Everyone can see the company pulse!
     public ResponseEntity<DashboardSummaryDTO> getDashboardSummary() {
         log.info("API Request: Compiling real-time company financial intelligence summary.");
-
         DashboardSummaryDTO summary = dashboardService.getDashboardSummary();
         return ResponseEntity.ok(summary);
     }

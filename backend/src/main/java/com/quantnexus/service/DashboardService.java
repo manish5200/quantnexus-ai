@@ -9,6 +9,7 @@ import com.quantnexus.dto.financial.RecentActivityDTO;
 import com.quantnexus.repository.FinancialRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class DashboardService {
     private final FinancialRecordRepository recordRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "dashboardSummary", key = "'global'")
     public DashboardSummaryDTO getDashboardSummary(){
         log.info("Generating real-time financial intelligence for the Company Ledger");
 
