@@ -12,25 +12,32 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Dynamic SQL Query Builder for the Company Ledger.
+ * Constructs complex filters without writing raw SQL.
+ */
 public class FinancialRecordSpecs {
 
     public static Specification<FinancialRecord>getFilteredRecords(
-            Long userId, TransactionType type, TransactionCategory category,
-            LocalDate startDate, LocalDate endDate){
+            TransactionType type,
+            TransactionCategory category,
+            LocalDate startDate,
+            LocalDate endDate){
 
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Must belong to the user
-            predicates.add(criteriaBuilder.equal(root.get("user").get("id"), userId));
-
-            // 2. Optional Filters
+            // 1. Filter by Type (e.g., INCOME vs EXPENSE)
             if(type != null){
                 predicates.add(criteriaBuilder.equal(root.get("transactionType"), type));
             }
+
+            // 2. Filter by Category (e.g., INFRASTRUCTURE vs MARKETING)
             if (category != null) {
                 predicates.add(criteriaBuilder.equal(root.get("transactionCategory"), category));
             }
+
+            // 3. Filter by Date Range (e.g., "Show me Q1 2024")
             if(startDate != null){
                 LocalDateTime startDateTime = startDate.atStartOfDay();
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("transactionDate"), startDateTime));
@@ -40,6 +47,7 @@ public class FinancialRecordSpecs {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("transactionDate"), endOfDay));
             }
 
+            //combine all active filters with an SQL "AND"
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

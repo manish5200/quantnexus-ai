@@ -5,22 +5,20 @@ import lombok.Getter;
 @Getter
 public enum TransactionCategory {
     // --- Income Categories ---
-    SALARY("Monthly salary or wages", TransactionType.INCOME),
-    INVESTMENT("Dividends, stocks, or interest", TransactionType.INCOME),
-    GIFTS("Monetary gifts or bonuses", TransactionType.INCOME),
+    REVENUE("Incoming business income", TransactionType.INCOME),
+    INVESTMENT("Funding, capital injection, or interest", TransactionType.INCOME),
 
     // --- Expense Categories ---
-    FOOD_AND_DINING("Restaurants, groceries, and cafes", TransactionType.EXPENSE),
-    SHOPPING("Clothing, electronics, and personal items", TransactionType.EXPENSE),
-    TRANSPORT("Fuel, public transport, or ride-sharing", TransactionType.EXPENSE),
-    BILLS_AND_UTILITIES("Electricity, water, internet, or rent", TransactionType.EXPENSE),
-    ENTERTAINMENT("Movies, gaming, or hobbies", TransactionType.EXPENSE),
-    HEALTHCARE("Medicine, gym, or doctor visits", TransactionType.EXPENSE),
-    EDUCATION("Tuition, books, or courses", TransactionType.EXPENSE),
-    OTHERS("Miscellaneous transactions", TransactionType.EXPENSE);
+    SALARY("Employee payments and payroll", TransactionType.EXPENSE),
+    INFRASTRUCTURE("Cloud, servers, and software tools", TransactionType.EXPENSE),
+    OPERATIONS("Day-to-day operational costs", TransactionType.EXPENSE),
+    MARKETING("Ads, promotions, and sponsorships", TransactionType.EXPENSE),
+    TAX("Government payments and compliance", TransactionType.EXPENSE),
+    OTHER("Miscellaneous expenses", TransactionType.EXPENSE);
 
     private final String description;
     private final TransactionType allowedType;
+
     TransactionCategory(String description, TransactionType allowedType) {
         this.description = description;
         this.allowedType = allowedType;

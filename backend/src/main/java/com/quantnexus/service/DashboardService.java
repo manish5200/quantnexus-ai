@@ -33,11 +33,11 @@ public class DashboardService {
     private final FinancialRecordRepository recordRepository;
 
     @Transactional(readOnly = true)
-    public DashboardSummaryDTO getDashboardSummary(Long userId){
-        log.info("Generating real-time financial intelligence for User ID: {}", userId);
+    public DashboardSummaryDTO getDashboardSummary(){
+        log.info("Generating real-time financial intelligence for the Company Ledger");
 
         // 1. Fetch all records [In a high-load app, we'd use the Repo math]
-        List<FinancialRecord> allRecords = recordRepository.findByUserId(userId);
+        List<FinancialRecord> allRecords = recordRepository.findAll();
 
         // 2. Calculate Totals using Functional Streams
         BigDecimal totalIncome = calculateTotalByType(allRecords, TransactionType.INCOME);

@@ -60,36 +60,29 @@ public class FinancialRecordController {
     @GetMapping("/{refNumber}")
     @PreAuthorize("hasAnyRole('ADMIN','ANALYST')")
     public ResponseEntity<TransactionResponse>getByReferenceNumber(
-            @AuthenticationPrincipal SecurityUser securityUser,
             @PathVariable String refNumber){
-        Long userId = securityUser.getId();
-        log.info("API Request: Fetch record {} for User {}", refNumber, userId);
-        return ResponseEntity.ok(recordService.getByReference(userId, refNumber, true));
+        log.info("API Request: Fetch company record {}", refNumber);
+        return ResponseEntity.ok(recordService.getByReference(refNumber));
     }
 
     /**
      * DATABASE-LEVEL DYNAMIC FILTERING
-     * Fetches a paginated history of transactions based on optional criteria.
+     *Fetches a paginated history of all company transactions based on criteria.
      * Example: /api/v1/records?type=EXPENSE&category=FOOD&startDate=2024-01-01
      */
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     public ResponseEntity<Page<TransactionResponse>>getTransactionsHistory(
-            @AuthenticationPrincipal SecurityUser securityUser,
-
             // --- The Standout Filtering Params ---
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) TransactionCategory category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-
             // --- Pagination & Sorting ---
             @PageableDefault(size = 15, sort = "transactionDate", direction = Sort.Direction.DESC) Pageable pageable){
 
-        Long userId = securityUser.getId();
-
-        log.info("API Request: Fetch filtered history for User [{}]", userId);
-        return ResponseEntity.ok(recordService.getHistory(userId, type, category, startDate, endDate, pageable));
+        log.info("API Request: Fetch filtered global company history");
+        return ResponseEntity.ok(recordService.getHistory(type, category, startDate, endDate, pageable));
     }
 
     //Updating the existing record using transaction reference number

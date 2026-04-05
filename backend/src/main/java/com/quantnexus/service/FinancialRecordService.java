@@ -88,37 +88,29 @@ public class FinancialRecordService {
     }
 
     /**
-     * Fetches a single record by reference number with strict security checks.
-     * Logic: A user can see their OWN record. Staff (Admin/Analyst) can see ANY
-     * record.
+     * Fetches a single company record by reference number.
+     * Controller-level @PreAuthorize ensures only Staff can reach this method.
      */
     @Transactional(readOnly = true)
-    public TransactionResponse getByReference(
-            Long currentUserId, String refNumber, boolean isStaff) {
-
+    public TransactionResponse getByReference(String refNumber) {
         FinancialRecord record = recordRepository.findByReferenceNumber(refNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Ledger entry not found: " + refNumber));
 
-        // The "Gatekeeper" logic: Only the owner or staff members get past this point.
-        if (!isStaff && !record.getUser().getId().equals(currentUserId)) {
-            log.error("Security Alert: Unauthorized access attempt to record {} by User {}", refNumber, currentUserId);
-            throw new AccessDeniedException("Access Denied: You do not have permission to view this transaction.");
-        }
         return mapToResponse(record);
 
     }
 
     /**
-     * Grabs a list of all transactions for a user, neatly organized into pages.
+     * Grabs a list of all transactions for company, neatly organized into pages.
      */
     public Page<TransactionResponse> getHistory(
-            Long userId, TransactionType type, TransactionCategory category,
+            TransactionType type, TransactionCategory category,
             LocalDate startDate, LocalDate endDate, Pageable pageable) {
 
-        log.info("Fetching filtered history for user ID: {}", userId);
+        log.info("Fetching filtered global company history");
 
         Specification<FinancialRecord> specs = FinancialRecordSpecs.getFilteredRecords(
-                userId, type, category, startDate, endDate);
+                type, category, startDate, endDate);
 
         return recordRepository.findAll(specs, pageable).map(this::mapToResponse);
     }
