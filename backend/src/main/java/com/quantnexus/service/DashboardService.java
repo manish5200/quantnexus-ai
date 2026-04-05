@@ -9,6 +9,7 @@ import com.quantnexus.dto.financial.RecentActivityDTO;
 import com.quantnexus.repository.FinancialRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,32 +37,32 @@ public class DashboardService {
     public DashboardSummaryDTO getDashboardSummary(){
         log.info("Generating real-time financial intelligence for the Company Ledger");
 
-        // 1. Fetch all records [In a high-load app, we'd use the Repo math]
-        List<FinancialRecord> allRecords = recordRepository.findAll();
-
+        //  O(1) Database Aggregations
         // 2. Calculate Totals using Functional Streams
-        BigDecimal totalIncome = calculateTotalByType(allRecords, TransactionType.INCOME);
-        BigDecimal totalExpenses = calculateTotalByType(allRecords, TransactionType.EXPENSE);
+        BigDecimal totalIncome = recordRepository.getTotalByType(TransactionType.INCOME);
+        BigDecimal totalExpenses = recordRepository.getTotalByType(TransactionType.EXPENSE);
         BigDecimal netBalance = totalIncome.subtract(totalExpenses);
 
-        // 3. Group Expenses by Category (Requirement #3: Category wise totals)
-        Map<String, BigDecimal>categoryTotals = allRecords.stream()
-                .filter(record -> record.getTransactionType() == TransactionType.EXPENSE)
-                .collect(Collectors.groupingBy(
-                        record -> record.getTransactionCategory().name(),
-                        Collectors.reducing(BigDecimal.ZERO,
-                                FinancialRecord::getAmount, BigDecimal::add)
-                ));
-
-        // 4. Feed Population: Identifying the 5 most recent activities
-        List<RecentActivityDTO> recentActivity = allRecords.stream()
-                .sorted(Comparator.comparing(FinancialRecord::getTransactionDate).reversed())
-                .limit(5)
+        // 2. Get Recent Activity directly from DB (Limit 5)
+        List<RecentActivityDTO> recentActivity = recordRepository.findRecentActivity(PageRequest.of(0,5))
+                .stream()
                 .map(this::mapToRecentActivity)
                 .toList();
 
+
+        // 3. For Categorical and Monthly Trends:
+        List<FinancialRecord>expenseRecords = recordRepository.findAll().stream()
+                .filter(record -> record.getTransactionType() == TransactionType.EXPENSE)
+                .toList();
+
+        Map<String, BigDecimal>categoryTotals = expenseRecords.stream()
+                .collect(Collectors.groupingBy(
+                        record -> record.getTransactionCategory().name(),
+                        Collectors.reducing(BigDecimal.ZERO,FinancialRecord::getAmount, BigDecimal::add)
+                ));
+
         // 5. Generate Monthly Trends (Simple month-to-month comparison)
-        List<MonthlyTrendDTO>monthlyTrends = generateMonthlyTrends(allRecords);
+        List<MonthlyTrendDTO>monthlyTrends = generateMonthlyTrends(recordRepository.findAll());
 
         // 6. Calculate Financial Health Score (The "Senior" Unique Logic)
         FinancialHealthDTO healthScore = calculateFinancialHealth(totalIncome,netBalance);
