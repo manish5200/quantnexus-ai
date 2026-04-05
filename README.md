@@ -10,11 +10,12 @@
 
   <br>
 
-  [![Java](https://img.shields.io/badge/Java_21-007396?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
-  [![Spring Boot](https://img.shields.io/badge/Spring_Boot_4.0.x-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
-  [![Spring Security](https://img.shields.io/badge/Security_JWT-512BD4?style=for-the-badge&logo=spring-security&logoColor=white)](https://spring.io/projects/spring-security)
-  [![Database](https://img.shields.io/badge/H2%20/%20PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-  [![Cache](https://img.shields.io/badge/Upstash_Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://upstash.com/)
+[![Java](https://img.shields.io/badge/Java_21-007396?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot_4.0.x-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Security](https://img.shields.io/badge/Security_JWT-512BD4?style=for-the-badge&logo=spring-security&logoColor=white)](https://spring.io/projects/spring-security)
+[![Database](https://img.shields.io/badge/H2%20/%20PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Cache](https://img.shields.io/badge/Upstash_Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://upstash.com/)
+[![Swagger](https://img.shields.io/badge/API-Documentation-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://localhost:8080/swagger-ui.html)
 
   <br>
 </div>
