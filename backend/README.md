@@ -11,7 +11,7 @@
   <br>
 
   [![Java](https://img.shields.io/badge/Java_21-007396?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
-  [![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.3-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
+  [![Spring Boot](https://img.shields.io/badge/Spring_Boot_4.0.x-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
   [![Spring Security](https://img.shields.io/badge/Security_JWT-512BD4?style=for-the-badge&logo=spring-security&logoColor=white)](https://spring.io/projects/spring-security)
   [![Database](https://img.shields.io/badge/H2%20/%20PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
@@ -24,12 +24,12 @@
 <details>
   <summary>Click to expand</summary>
 
-1. [🎯 Project Mission](#-project-mission)
-2. [🤖 Core Architecture & Flow](#-core-architecture--flow)
-3. [✅ Assignment Fulfillment (Zorvyn Rubric)](#-assignment-fulfillment-zorvyn-rubric)
-4. [💎 The "Nexus" Engineering Edge](#-the-nexus-engineering-edge)
-5. [🚀 Quick Setup Guide](#-quick-setup-guide)
-6. [📌 Architectural Trade-offs & Decisions](#-architectural-trade-offs--decisions)
+1. [🎯 Project Mission](#project-mission)
+2. [🤖 Core Architecture & Flow](#core-architecture--flow)
+3. [✅ Assignment Fulfillment (Zorvyn Rubric)](#assignment-fulfillment-zorvyn-rubric)
+4. [💎 The "Nexus" Engineering Edge](#the-nexus-engineering-edge)
+5. [🚀 Quick Setup Guide](#quick-setup-guide)
+6. [📌 Architectural Trade-offs & Decisions](#architectural-trade-offs--decisions)
 </details>
 
 ---
