@@ -13,10 +13,10 @@ import com.quantnexus.repository.specification.FinancialRecordSpecs;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +44,7 @@ public class FinancialRecordService {
      * historical record of the user's balance at that exact moment.
      */
     @Transactional
+    @CacheEvict(value = "dashboardSummary", allEntries = true)
     public TransactionResponse createTransaction(Long currentUserId, TransactionRequest request) {
         log.info("Processing new {} transaction for User ID: {}", request.type(), currentUserId);
 
@@ -119,6 +120,7 @@ public class FinancialRecordService {
      * Updates an existing record and triggers an IN-MEMORY Balance Cascade.
      */
     @Transactional
+    @CacheEvict(value = "dashboardSummary", allEntries = true)
     public TransactionResponse updateRecord(String refNumber, TransactionUpdateRequest request) {
         FinancialRecord record = recordRepository.findByReferenceNumber(refNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Ledger entry not found: " + refNumber));
@@ -199,6 +201,7 @@ public class FinancialRecordService {
      * we just "hide" it. Only Admins can do this.
      */
     @Transactional
+    @CacheEvict(value = "dashboardSummary", allEntries = true)
     public void deleteRecord(String referenceNumber) {
         FinancialRecord record = recordRepository.findByReferenceNumber(referenceNumber)
                 .orElseThrow(() -> new EntityNotFoundException("Modification Error: Target record not found."));
