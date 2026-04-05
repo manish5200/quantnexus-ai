@@ -12,10 +12,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -32,6 +29,7 @@ public class UserManagementController {
         return ResponseEntity.ok(userManagementService.getAllUsers(pageable));
     }
 
+    @PutMapping("/{userId}/role/{role}")
     public ResponseEntity<UserProfileResponse>changeUserRole(
             @AuthenticationPrincipal SecurityUser admin,// Inject the Admin making the request
             @PathVariable Long userId,
@@ -40,6 +38,7 @@ public class UserManagementController {
         return ResponseEntity.ok(userManagementService.updateUserRole(userId, role, admin.getId()));
     }
 
+    @PatchMapping("/{userId}/status")
     public ResponseEntity<UserProfileResponse>toggleUserStatus(
             @AuthenticationPrincipal SecurityUser admin, // Inject the Admin making the request
             @PathVariable Long userId){
