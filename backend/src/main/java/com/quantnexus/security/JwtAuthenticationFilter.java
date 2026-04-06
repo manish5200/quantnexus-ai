@@ -32,6 +32,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService; // Injects our JpaUserDetailsService
+    private final JwtBlacklistService blacklistService;
+
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getServletPath().startsWith("/auth");
+    }
 
     @Override
     protected void doFilterInternal(
@@ -52,6 +59,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try{
             // 2. Extract the token string and the email payload
             jwt = authHeader.substring(7);
+
+            //Check if token was manually locked : logout
+            if(blacklistService.isTokenBlacklisted(jwt)){
+                log.warn("Security Alert: Blocked attempt to use a revoked token.");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Session terminated. Please log in again.");
+                return;
+            }
             userEmail = jwtService.extractUsername(jwt);
 
             // 3. If an email exists and the user isn't already authenticated in this thread

@@ -7,6 +7,7 @@ import com.quantnexus.dto.auth.LoginResponse;
 import com.quantnexus.dto.auth.RegisterRequest;
 import com.quantnexus.dto.auth.RegistrationResponse;
 import com.quantnexus.repository.UserRepository;
+import com.quantnexus.security.JwtBlacklistService;
 import com.quantnexus.security.JwtService;
 import com.quantnexus.security.SecurityUser;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final JwtBlacklistService jwtBlacklistService;
 
     /*
      * Registers a new user with advanced security features.
@@ -116,5 +118,30 @@ public class AuthService {
                 "Welcome back, " + user.getFullName()
         );
     }
+
+
+    // -----------------------------------------
+    // LOGOUT
+    // -----------------------------------------
+    /*
+     * Logout = invalidate the current access token
+     * @Param authorizationHeader  The raw "Authorization: Bearer <token>" header
+    */
+    public void logout(String authHeader){
+        if(authHeader == null || !authHeader.startsWith("Bearer ")){
+            log.warn("⚠️ Security Alert: Malformed logout request intercepted.");
+            throw new IllegalArgumentException("No valid Authorization header provided.");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        String userEmail = jwtService.extractUsername(jwtToken);
+
+        jwtBlacklistService.blacklistToken(jwtToken);
+
+        log.info("🔒 Cryptographic Identity Passport Revoked for session.");
+        log.info("✅ User logged out successfully: {}", userEmail);
+
+    }
+
 
 }
